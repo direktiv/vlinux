@@ -1,7 +1,7 @@
-From 94c88556c83b2ba4a78c5f24862ac51b8784dbbc Mon Sep 17 00:00:00 2001
+From 66dfcc38e48826f4003dfd0b03cecc899d1b2c79 Mon Sep 17 00:00:00 2001
 From: Jens Gerke <jens.gerke@vorteil.io>
-Date: Sun, 20 Sep 2020 13:18:54 +1000
-Subject: [PATCH] fixed bundler build
+Date: Tue, 22 Sep 2020 09:03:07 +1000
+Subject: [PATCH] hyper
 
 ---
  drivers/Kconfig               |    2 +
@@ -13,12 +13,12 @@ Subject: [PATCH] fixed bundler build
  drivers/_vorteil/internal.h   |   14 +
  drivers/_vorteil/vlogfs.c     |  277 +++
  drivers/_vorteil/vlogfs_ops.c |  171 ++
- drivers/_vorteil/vorteilfs.c  |  404 +++++
+ drivers/_vorteil/vorteilfs.c  |  404 ++++
  drivers/_vorteil/vtty.c       |  158 ++
  init/do_mounts.c              |   10 +-
  init/main.c                   |    8 +
- linux.config                  | 3212 +++++++++++++++++++++++++++++++++
- 14 files changed, 4397 insertions(+), 1 deletion(-)
+ linux.config                  | 3249 +++++++++++++++++++++++++++++++++
+ 14 files changed, 4434 insertions(+), 1 deletion(-)
  create mode 100644 drivers/_vorteil/Kconfig
  create mode 100644 drivers/_vorteil/Makefile
  create mode 100644 drivers/_vorteil/bootdev.c
@@ -1330,10 +1330,10 @@ index 883ded363..427271ac1 100644
  	do_sysctl_args();
 diff --git a/linux.config b/linux.config
 new file mode 100644
-index 000000000..7f1c9f79b
+index 000000000..70b7dd05e
 --- /dev/null
 +++ b/linux.config
-@@ -0,0 +1,3212 @@
+@@ -0,0 +1,3249 @@
 +#
 +# Automatically generated file; DO NOT EDIT.
 +# Linux/x86 5.8.8 Kernel Configuration
@@ -1619,6 +1619,7 @@ index 000000000..7f1c9f79b
 +CONFIG_ZONE_DMA=y
 +CONFIG_SMP=y
 +CONFIG_X86_FEATURE_NAMES=y
++# CONFIG_X86_X2APIC is not set
 +CONFIG_X86_MPPARSE=y
 +# CONFIG_GOLDFISH is not set
 +CONFIG_RETPOLINE=y
@@ -1628,7 +1629,19 @@ index 000000000..7f1c9f79b
 +# CONFIG_X86_AMD_PLATFORM_DEVICE is not set
 +# CONFIG_IOSF_MBI is not set
 +CONFIG_SCHED_OMIT_FRAME_POINTER=y
-+# CONFIG_HYPERVISOR_GUEST is not set
++CONFIG_HYPERVISOR_GUEST=y
++CONFIG_PARAVIRT=y
++# CONFIG_PARAVIRT_DEBUG is not set
++# CONFIG_PARAVIRT_SPINLOCKS is not set
++CONFIG_X86_HV_CALLBACK_VECTOR=y
++# CONFIG_XEN is not set
++CONFIG_KVM_GUEST=y
++CONFIG_ARCH_CPUIDLE_HALTPOLL=y
++# CONFIG_PVH is not set
++# CONFIG_PARAVIRT_TIME_ACCOUNTING is not set
++CONFIG_PARAVIRT_CLOCK=y
++# CONFIG_JAILHOUSE_GUEST is not set
++# CONFIG_ACRN_GUEST is not set
 +# CONFIG_MK8 is not set
 +# CONFIG_MPSC is not set
 +# CONFIG_MCORE2 is not set
@@ -1848,6 +1861,8 @@ index 000000000..7f1c9f79b
 +CONFIG_CPU_IDLE_GOV_LADDER=y
 +CONFIG_CPU_IDLE_GOV_MENU=y
 +# CONFIG_CPU_IDLE_GOV_TEO is not set
++# CONFIG_CPU_IDLE_GOV_HALTPOLL is not set
++CONFIG_HALTPOLL_CPUIDLE=y
 +# end of CPU Idle
 +
 +CONFIG_INTEL_IDLE=y
@@ -1953,6 +1968,8 @@ index 000000000..7f1c9f79b
 +CONFIG_HAVE_PERF_USER_STACK_DUMP=y
 +CONFIG_HAVE_ARCH_JUMP_LABEL=y
 +CONFIG_HAVE_ARCH_JUMP_LABEL_RELATIVE=y
++CONFIG_MMU_GATHER_TABLE_FREE=y
++CONFIG_MMU_GATHER_RCU_TABLE_FREE=y
 +CONFIG_ARCH_HAVE_NMI_SAFE_CMPXCHG=y
 +CONFIG_HAVE_ALIGNED_STRUCT_PAGE=y
 +CONFIG_HAVE_CMPXCHG_LOCAL=y
@@ -2550,6 +2567,7 @@ index 000000000..7f1c9f79b
 +CONFIG_VMWARE_VMCI_VSOCKETS=y
 +CONFIG_VIRTIO_VSOCKETS=y
 +CONFIG_VIRTIO_VSOCKETS_COMMON=y
++# CONFIG_HYPERV_VSOCKETS is not set
 +# CONFIG_NETLINK_DIAG is not set
 +CONFIG_MPLS=y
 +# CONFIG_NET_MPLS_GSO is not set
@@ -2627,12 +2645,14 @@ index 000000000..7f1c9f79b
 +# CONFIG_PCI_PRI is not set
 +# CONFIG_PCI_PASID is not set
 +CONFIG_PCI_LABEL=y
++CONFIG_PCI_HYPERV=y
 +# CONFIG_HOTPLUG_PCI is not set
 +
 +#
 +# PCI controller drivers
 +#
 +# CONFIG_VMD is not set
++CONFIG_PCI_HYPERV_INTERFACE=y
 +
 +#
 +# DesignWare PCI Core Support
@@ -2755,6 +2775,7 @@ index 000000000..7f1c9f79b
 +# CONFIG_TIFM_CORE is not set
 +# CONFIG_ENCLOSURE_SERVICES is not set
 +# CONFIG_HP_ILO is not set
++# CONFIG_VMWARE_BALLOON is not set
 +# CONFIG_SRAM is not set
 +# CONFIG_PCI_ENDPOINT_TEST is not set
 +# CONFIG_XILINX_SDFEC is not set
@@ -2795,6 +2816,7 @@ index 000000000..7f1c9f79b
 +# CONFIG_MISC_ALCOR_PCI is not set
 +# CONFIG_MISC_RTSX_PCI is not set
 +# CONFIG_HABANA_AI is not set
++# CONFIG_UACCE is not set
 +# end of Misc devices
 +
 +CONFIG_HAVE_IDE=y
@@ -2866,6 +2888,7 @@ index 000000000..7f1c9f79b
 +# CONFIG_SCSI_MYRB is not set
 +# CONFIG_SCSI_MYRS is not set
 +CONFIG_VMWARE_PVSCSI=y
++CONFIG_HYPERV_STORAGE=y
 +# CONFIG_SCSI_SNIC is not set
 +# CONFIG_SCSI_DMX3191D is not set
 +# CONFIG_SCSI_FDOMAIN_PCI is not set
@@ -3033,6 +3056,7 @@ index 000000000..7f1c9f79b
 +# CONFIG_WAN is not set
 +CONFIG_VMXNET3=y
 +# CONFIG_FUJITSU_ES is not set
++CONFIG_HYPERV_NET=y
 +# CONFIG_NETDEVSIM is not set
 +CONFIG_NET_FAILOVER=y
 +# CONFIG_ISDN is not set
@@ -3096,6 +3120,7 @@ index 000000000..7f1c9f79b
 +# CONFIG_SERIO_ALTERA_PS2 is not set
 +# CONFIG_SERIO_PS2MULT is not set
 +# CONFIG_SERIO_ARC_PS2 is not set
++CONFIG_HYPERV_KEYBOARD=y
 +# CONFIG_USERIO is not set
 +# CONFIG_GAMEPORT is not set
 +# end of Hardware I/O ports
@@ -3214,6 +3239,8 @@ index 000000000..7f1c9f79b
 +#
 +# Enable PHYLIB and NETWORK_PHY_TIMESTAMPING to see the additional clocks.
 +#
++CONFIG_PTP_1588_CLOCK_KVM=y
++# CONFIG_PTP_1588_CLOCK_VMW is not set
 +# end of PTP clock support
 +
 +# CONFIG_PINCTRL is not set
@@ -3456,6 +3483,7 @@ index 000000000..7f1c9f79b
 +# CONFIG_HID_SUNPLUS is not set
 +# CONFIG_HID_RMI is not set
 +# CONFIG_HID_GREENASIA is not set
++# CONFIG_HID_HYPERV_MOUSE is not set
 +# CONFIG_HID_SMARTJOYPLUS is not set
 +# CONFIG_HID_TIVO is not set
 +# CONFIG_HID_TOPSEED is not set
@@ -3531,6 +3559,7 @@ index 000000000..7f1c9f79b
 +
 +# CONFIG_AUXDISPLAY is not set
 +# CONFIG_UIO is not set
++# CONFIG_VFIO is not set
 +CONFIG_VIRT_DRIVERS=y
 +# CONFIG_VBOXGUEST is not set
 +CONFIG_VIRTIO=y
@@ -3553,6 +3582,10 @@ index 000000000..7f1c9f79b
 +#
 +# Microsoft Hyper-V guest support
 +#
++CONFIG_HYPERV=y
++CONFIG_HYPERV_TIMER=y
++CONFIG_HYPERV_UTILS=y
++CONFIG_HYPERV_BALLOON=y
 +# end of Microsoft Hyper-V guest support
 +
 +# CONFIG_GREYBUS is not set
@@ -3579,6 +3612,7 @@ index 000000000..7f1c9f79b
 +CONFIG_MAILBOX=y
 +CONFIG_PCC=y
 +# CONFIG_ALTERA_MBOX is not set
++CONFIG_IOMMU_API=y
 +CONFIG_IOMMU_SUPPORT=y
 +
 +#
@@ -3587,9 +3621,11 @@ index 000000000..7f1c9f79b
 +# end of Generic IOMMU Pagetable Support
 +
 +# CONFIG_IOMMU_DEBUGFS is not set
++# CONFIG_IOMMU_DEFAULT_PASSTHROUGH is not set
 +# CONFIG_AMD_IOMMU is not set
 +# CONFIG_INTEL_IOMMU is not set
 +# CONFIG_IRQ_REMAP is not set
++CONFIG_HYPERV_IOMMU=y
 +
 +#
 +# Remoteproc drivers
@@ -4544,6 +4580,7 @@ index 000000000..7f1c9f79b
 +# CONFIG_TEST_STACKINIT is not set
 +# CONFIG_TEST_MEMINIT is not set
 +# CONFIG_MEMTEST is not set
++# CONFIG_HYPERV_TESTING is not set
 +# end of Kernel Testing and Coverage
 +# end of Kernel hacking
 -- 
