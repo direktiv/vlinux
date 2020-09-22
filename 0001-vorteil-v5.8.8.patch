@@ -1,7 +1,7 @@
-From 66dfcc38e48826f4003dfd0b03cecc899d1b2c79 Mon Sep 17 00:00:00 2001
+From 7791ab76f39785faad5d4bac075ed07b3717fcd3 Mon Sep 17 00:00:00 2001
 From: Jens Gerke <jens.gerke@vorteil.io>
-Date: Tue, 22 Sep 2020 09:03:07 +1000
-Subject: [PATCH] hyper
+Date: Tue, 22 Sep 2020 18:21:48 +1000
+Subject: [PATCH] ext2
 
 ---
  drivers/Kconfig               |    2 +
@@ -1330,7 +1330,7 @@ index 883ded363..427271ac1 100644
  	do_sysctl_args();
 diff --git a/linux.config b/linux.config
 new file mode 100644
-index 000000000..70b7dd05e
+index 000000000..d5e3b3d90
 --- /dev/null
 +++ b/linux.config
 @@ -0,0 +1,3249 @@
@@ -3757,10 +3757,10 @@ index 000000000..70b7dd05e
 +CONFIG_DCACHE_WORD_ACCESS=y
 +CONFIG_VALIDATE_FS_PARSER=y
 +CONFIG_FS_IOMAP=y
-+# CONFIG_EXT2_FS is not set
++CONFIG_EXT2_FS=y
++# CONFIG_EXT2_FS_XATTR is not set
 +# CONFIG_EXT3_FS is not set
 +CONFIG_EXT4_FS=y
-+CONFIG_EXT4_USE_FOR_EXT2=y
 +CONFIG_EXT4_FS_POSIX_ACL=y
 +CONFIG_EXT4_FS_SECURITY=y
 +# CONFIG_EXT4_DEBUG is not set
