@@ -1,6 +1,6 @@
-From 57fc77c0f8e5d78f8eb5faf0f79bf7ce79a37e64 Mon Sep 17 00:00:00 2001
+From cbed5081a4e034ef97462899d08a6a09d9bb7a8b Mon Sep 17 00:00:00 2001
 From: Jens Gerke <jens.gerke@vorteil.io>
-Date: Thu, 24 Sep 2020 16:34:04 +1000
+Date: Thu, 24 Sep 2020 17:47:22 +1000
 Subject: [PATCH] add wr mutex
 
 ---
@@ -14,11 +14,11 @@ Subject: [PATCH] add wr mutex
  drivers/_vorteil/vlogfs.c     |  277 +++
  drivers/_vorteil/vlogfs_ops.c |  171 ++
  drivers/_vorteil/vorteilfs.c  |  404 ++++
- drivers/_vorteil/vtty.c       |  163 ++
+ drivers/_vorteil/vtty.c       |  172 ++
  init/do_mounts.c              |   10 +-
  init/main.c                   |    8 +
  linux.config                  | 3249 +++++++++++++++++++++++++++++++++
- 14 files changed, 4439 insertions(+), 1 deletion(-)
+ 14 files changed, 4448 insertions(+), 1 deletion(-)
  create mode 100644 drivers/_vorteil/Kconfig
  create mode 100644 drivers/_vorteil/Makefile
  create mode 100644 drivers/_vorteil/bootdev.c
@@ -1107,10 +1107,10 @@ index 000000000..462453b07
 +fs_initcall(init_vorteilfs_fs);
 diff --git a/drivers/_vorteil/vtty.c b/drivers/_vorteil/vtty.c
 new file mode 100644
-index 000000000..ee0691c19
+index 000000000..681140372
 --- /dev/null
 +++ b/drivers/_vorteil/vtty.c
-@@ -0,0 +1,163 @@
+@@ -0,0 +1,172 @@
 +#include <linux/init.h>
 +#include <linux/kernel.h>
 +#include <linux/cdev.h>
@@ -1148,7 +1148,7 @@ index 000000000..ee0691c19
 +static ssize_t vtty_write(struct file *file, const char __user *user_buffer,
 +			  size_t size, loff_t *offset)
 +{
-+	int len;
++	int len = 0;
 +	mutex_lock(&lock);
 +
 +	if (dev.tty != NULL) {
@@ -1167,6 +1167,11 @@ index 000000000..ee0691c19
 +		if (len > 0) {
 +			fsnotify_modify(dev.ttyRedir);
 +		}
++	}
++
++	// if output is set to disabled we fake all has been writtemn
++	if (len == 0) {
++		len = size;
 +	}
 +
 +	mutex_unlock(&lock);
@@ -1196,6 +1201,7 @@ index 000000000..ee0691c19
 +
 +		printk(KERN_INFO "vtty ioctl value: %d\n", in);
 +
++		mutex_lock(&lock);
 +		// standard 0
 +		// screen 1
 +		// serial 2
@@ -1233,6 +1239,7 @@ index 000000000..ee0691c19
 +		}
 +		break;
 +	default:
++		mutex_unlock(&lock);
 +		return -ENOTTY;
 +	}
 +
@@ -1246,6 +1253,8 @@ index 000000000..ee0691c19
 +			dev.ttyS0 = NULL;
 +		}
 +	}
++
++	mutex_unlock(&lock);
 +
 +	return 0;
 +}
