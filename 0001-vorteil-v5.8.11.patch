@@ -1,7 +1,7 @@
-From 7791ab76f39785faad5d4bac075ed07b3717fcd3 Mon Sep 17 00:00:00 2001
+From 57fc77c0f8e5d78f8eb5faf0f79bf7ce79a37e64 Mon Sep 17 00:00:00 2001
 From: Jens Gerke <jens.gerke@vorteil.io>
-Date: Tue, 22 Sep 2020 18:21:48 +1000
-Subject: [PATCH] ext2
+Date: Thu, 24 Sep 2020 16:34:04 +1000
+Subject: [PATCH] add wr mutex
 
 ---
  drivers/Kconfig               |    2 +
@@ -14,11 +14,11 @@ Subject: [PATCH] ext2
  drivers/_vorteil/vlogfs.c     |  277 +++
  drivers/_vorteil/vlogfs_ops.c |  171 ++
  drivers/_vorteil/vorteilfs.c  |  404 ++++
- drivers/_vorteil/vtty.c       |  158 ++
+ drivers/_vorteil/vtty.c       |  163 ++
  init/do_mounts.c              |   10 +-
  init/main.c                   |    8 +
  linux.config                  | 3249 +++++++++++++++++++++++++++++++++
- 14 files changed, 4434 insertions(+), 1 deletion(-)
+ 14 files changed, 4439 insertions(+), 1 deletion(-)
  create mode 100644 drivers/_vorteil/Kconfig
  create mode 100644 drivers/_vorteil/Makefile
  create mode 100644 drivers/_vorteil/bootdev.c
@@ -1107,10 +1107,10 @@ index 000000000..462453b07
 +fs_initcall(init_vorteilfs_fs);
 diff --git a/drivers/_vorteil/vtty.c b/drivers/_vorteil/vtty.c
 new file mode 100644
-index 000000000..af082f97c
+index 000000000..ee0691c19
 --- /dev/null
 +++ b/drivers/_vorteil/vtty.c
-@@ -0,0 +1,158 @@
+@@ -0,0 +1,163 @@
 +#include <linux/init.h>
 +#include <linux/kernel.h>
 +#include <linux/cdev.h>
@@ -1126,6 +1126,7 @@ index 000000000..af082f97c
 +#define CHECK_BIT(var, pos) ((var) & (1 << (pos)))
 +
 +struct cdev cdev;
++struct mutex lock;
 +
 +struct vtty_in {
 +	int mode, tty, ttyS0, ttyRedir;
@@ -1148,6 +1149,7 @@ index 000000000..af082f97c
 +			  size_t size, loff_t *offset)
 +{
 +	int len;
++	mutex_lock(&lock);
 +
 +	if (dev.tty != NULL) {
 +		len = (dev.tty->f_op->write)(dev.tty, user_buffer, size,
@@ -1167,6 +1169,7 @@ index 000000000..af082f97c
 +		}
 +	}
 +
++	mutex_unlock(&lock);
 +	*offset += len;
 +	return len;
 +}
@@ -1264,6 +1267,8 @@ index 000000000..af082f97c
 +	dev = MKDEV(MAJOR(dev), MINOR(dev));
 +	device_create(vtty_class, NULL, dev, NULL, "vtty");
 +	cdev_add(&cdev, dev, 1);
++
++	mutex_init(&lock);
 +
 +	return 0;
 +}
