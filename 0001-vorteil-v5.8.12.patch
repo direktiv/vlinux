@@ -1,7 +1,7 @@
-From ff3047dae6856f77b2eb3f07a8d9bef838d69aa9 Mon Sep 17 00:00:00 2001
+From 92008f9e2c35bb025aac091be9a6d0b8c673fdd7 Mon Sep 17 00:00:00 2001
 From: Jens Gerke <jens.gerke@vorteil.io>
-Date: Wed, 30 Sep 2020 12:47:48 +1000
-Subject: [PATCH] xen
+Date: Wed, 30 Sep 2020 15:06:32 +1000
+Subject: [PATCH] 5.8.12
 
 ---
  drivers/Kconfig               |    2 +
@@ -1344,7 +1344,7 @@ index 883ded363..427271ac1 100644
  	do_sysctl_args();
 diff --git a/linux.config b/linux.config
 new file mode 100644
-index 000000000..5f64f0527
+index 000000000..29a7cf885
 --- /dev/null
 +++ b/linux.config
 @@ -0,0 +1,3224 @@
@@ -3814,10 +3814,10 @@ index 000000000..5f64f0527
 +CONFIG_DCACHE_WORD_ACCESS=y
 +CONFIG_VALIDATE_FS_PARSER=y
 +CONFIG_FS_IOMAP=y
-+CONFIG_EXT2_FS=y
-+# CONFIG_EXT2_FS_XATTR is not set
++# CONFIG_EXT2_FS is not set
 +# CONFIG_EXT3_FS is not set
 +CONFIG_EXT4_FS=y
++CONFIG_EXT4_USE_FOR_EXT2=y
 +CONFIG_EXT4_FS_POSIX_ACL=y
 +CONFIG_EXT4_FS_SECURITY=y
 +# CONFIG_EXT4_DEBUG is not set
