@@ -1,9 +1,8 @@
-From 014d63f4143b9be053812d4c95aae4cd299140bd Mon Sep 17 00:00:00 2001
+From 8c296c46cd22e16fd3c836289b1b2ab1d58001d6 Mon Sep 17 00:00:00 2001
 From: Jens Gerke <jens.gerke@vorteil.io>
-Date: Wed, 21 Oct 2020 14:53:49 +1000
-Subject: [PATCH] change logging
+Date: Thu, 22 Oct 2020 09:28:51 +1000
+Subject: [PATCH] 111
 
-Signed-off-by: Jens Gerke <jens.gerke@vorteil.io>
 ---
  drivers/Kconfig               |    2 +
  drivers/Makefile              |    1 +
@@ -14,13 +13,13 @@ Signed-off-by: Jens Gerke <jens.gerke@vorteil.io>
  drivers/_vorteil/internal.h   |   14 +
  drivers/_vorteil/vlogfs.c     |  277 +++
  drivers/_vorteil/vlogfs_ops.c |  185 ++
- drivers/_vorteil/vorteilfs.c  |  409 ++++
+ drivers/_vorteil/vorteilfs.c  |  106 ++
  drivers/_vorteil/vtty.c       |  119 ++
  drivers/tty/tty_io.c          |    3 +-
  init/do_mounts.c              |   10 +-
  init/main.c                   |    8 +
  linux.config                  | 3316 +++++++++++++++++++++++++++++++++
- 15 files changed, 4482 insertions(+), 3 deletions(-)
+ 15 files changed, 4179 insertions(+), 3 deletions(-)
  create mode 100644 drivers/_vorteil/Kconfig
  create mode 100644 drivers/_vorteil/Makefile
  create mode 100644 drivers/_vorteil/bootdev.c
@@ -713,13 +712,12 @@ index 000000000..b6b839c4d
 +};
 diff --git a/drivers/_vorteil/vorteilfs.c b/drivers/_vorteil/vorteilfs.c
 new file mode 100644
-index 000000000..edaeac0e1
+index 000000000..914e36e07
 --- /dev/null
 +++ b/drivers/_vorteil/vorteilfs.c
-@@ -0,0 +1,409 @@
+@@ -0,0 +1,106 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
-+ * Performance events callchain code, extracted from core.c:
 + *
 + *  Copyright (C) 2019 vorteil.io Pty Ltd <support@vorteil.io>
 + */
@@ -733,26 +731,7 @@ index 000000000..edaeac0e1
 +
 +#include "internal.h"
 +
-+#define VORTEIL_MAGIC 0xC0FFEE50CC5
-+#define VORTEIL_PATH "/vorteil"
 +#define VBLOCK_SIZE 512
-+
-+struct path pathParent;
-+
-+static DEFINE_RWLOCK(wr_lock);
-+
-+static struct dentry *vorteilfs_mount(struct file_system_type *fs_type,
-+				      int flags, const char *dev_name,
-+				      void *data);
-+static int vorteilfs_fill_super(struct super_block *sb, void *data, int silent);
-+static void vorteilfs_kill_sb(struct super_block *sb);
-+static struct inode *vorteilfs_get_inode(struct super_block *sb, umode_t mode);
-+static int vorteilfs_mknode(char *parent, char *name, umode_t mode,
-+			    struct inode **inode);
-+static int vorteilfs_readpage(struct file *file, struct page *page);
-+ssize_t vorteilfs_read(struct file *f, char __user *b, size_t s, loff_t *o);
-+static int vorteilfs_release(struct inode *inode, struct file *file);
-+static int vorteilfs_open(struct inode *inode, struct file *file);
 +
 +struct star_header { /* byte offset */
 +	char name[100]; /*   0 */
@@ -776,279 +755,17 @@ index 000000000..edaeac0e1
 +	/* 500 */
 +};
 +
-+struct file_details {
-+	struct mutex fmtx;
-+};
-+
-+struct inode_details {
-+	size_t disk_size;
-+	void *file_mem;
-+	off_t disk_offset;
-+	atomic_t c;
-+};
-+
-+static struct file_system_type vorteilfs_fs_type = {
-+	.name = "vorteilfs",
-+	.mount = vorteilfs_mount,
-+	.kill_sb = vorteilfs_kill_sb,
-+	.fs_flags = FS_USERNS_MOUNT,
-+};
-+
-+static const struct super_operations vorteilfs_ops = {
-+	.statfs = simple_statfs,
-+	.drop_inode = generic_delete_inode,
-+};
-+
-+const struct file_operations vorteilfs_file_operations = {
-+	.mmap = generic_file_readonly_mmap,
-+	.llseek = generic_file_llseek,
-+	.read = vorteilfs_read,
-+	.open = vorteilfs_open,
-+	.release = vorteilfs_release,
-+};
-+
-+static const struct address_space_operations vorteil_aops = {
-+	.readpage = vorteilfs_readpage
-+};
-+
-+const struct inode_operations vorteilfs_file_inode_operations = {
-+	.setattr = simple_setattr,
-+	.getattr = simple_getattr,
-+};
-+
-+static const struct inode_operations vorteilfs_dir_inode_operations = {
-+	.lookup = simple_lookup,
-+};
-+
-+static int vorteilfs_release(struct inode *inode, struct file *file)
-+{
-+	struct inode_details *idet;
-+	unsigned long flags;
-+
-+	idet = inode->i_private;
-+
-+	write_lock_irqsave(&wr_lock, flags);
-+
-+	atomic_dec(&idet->c);
-+	if (!atomic_read(&idet->c)) {
-+		vfree(idet->file_mem);
-+		idet->file_mem = NULL;
-+		vfree(file->private_data);
-+		file->private_data = NULL;
-+	}
-+
-+	write_unlock_irqrestore(&wr_lock, flags);
-+
-+	return 0;
-+}
-+
-+static int vorteilfs_open(struct inode *inode, struct file *file)
-+{
-+	struct inode_details *idet;
-+	struct file_details *fdet;
-+	struct file *f;
-+	loff_t o;
-+	unsigned long flags;
-+
-+	idet = inode->i_private;
-+
-+	write_lock_irqsave(&wr_lock, flags);
-+
-+	if (idet->file_mem == NULL) {
-+		idet->file_mem = vmalloc(idet->disk_size);
-+		if (IS_ERR(idet->file_mem)) {
-+			panic("can not allocate memory (vorteilfs)");
-+		}
-+		f = filp_open(vorteil_disk(), O_RDONLY, 0);
-+		if (f == NULL) {
-+			panic("can not read disk (vorteilfs): %s",
-+			      vorteil_disk());
-+		}
-+		o = idet->disk_offset;
-+		kernel_read(f, idet->file_mem, inode->i_size, &o);
-+		filp_close(f, 0);
-+	}
-+
-+	fdet = vmalloc(sizeof(struct file_details));
-+	memset(fdet, 0, sizeof(struct file_details));
-+	mutex_init(&fdet->fmtx);
-+	file->private_data = fdet;
-+
-+	atomic_inc(&idet->c);
-+
-+	write_unlock_irqrestore(&wr_lock, flags);
-+	return 0;
-+}
-+
-+static int vorteilfs_readpage(struct file *file, struct page *page)
-+{
-+	struct file_details *fdet;
-+	struct inode_details *idet;
-+	struct inode *inode;
-+	loff_t offset, size;
-+	unsigned long fillsize;
-+	void *buf;
-+	int ret;
-+
-+	inode = page->mapping->host;
-+	idet = inode->i_private;
-+	fdet = file->private_data;
-+
-+	mutex_lock(&fdet->fmtx);
-+
-+	buf = kmap(page);
-+	if (!buf) {
-+		ret = -ENOMEM;
-+		goto done;
-+	}
-+
-+	offset = page_offset(page);
-+	size = i_size_read(inode);
-+	fillsize = 0;
-+	ret = 0;
-+	if (offset < size) {
-+		size -= offset;
-+		fillsize = size > PAGE_SIZE ? PAGE_SIZE : size;
-+		memcpy(buf, idet->file_mem + offset, fillsize);
-+		if (ret < 0) {
-+			SetPageError(page);
-+			fillsize = 0;
-+			ret = -EIO;
-+		}
-+	}
-+
-+	if (fillsize < PAGE_SIZE)
-+		memset(buf + fillsize, 0, PAGE_SIZE - fillsize);
-+
-+	if (ret == 0)
-+		SetPageUptodate(page);
-+
-+	flush_dcache_page(page);
-+	kunmap(page);
-+	unlock_page(page);
-+
-+done:;
-+	mutex_unlock(&fdet->fmtx);
-+	return ret;
-+}
-+
-+ssize_t vorteilfs_read(struct file *f, char __user *to, size_t count,
-+		       loff_t *ppos)
-+{
-+	struct file_details *fdet;
-+	struct inode_details *idet;
-+
-+	struct inode *inode;
-+	ssize_t ret;
-+
-+	fdet = f->private_data;
-+	inode = f->f_inode;
-+	idet = inode->i_private;
-+
-+	mutex_lock(&fdet->fmtx);
-+
-+	if (fdet == NULL || idet == NULL) {
-+		panic("vorteilfs_read: NULL\n");
-+	}
-+
-+	ret = simple_read_from_buffer(to, count, ppos, idet->file_mem,
-+				      inode->i_size);
-+
-+	mutex_unlock(&fdet->fmtx);
-+
-+	return ret;
-+}
-+
-+static int vorteilfs_fill_super(struct super_block *sb, void *data, int silent)
-+{
-+	struct inode *inode;
-+
-+	sb->s_maxbytes = MAX_LFS_FILESIZE;
-+	sb->s_blocksize = PAGE_SIZE;
-+	sb->s_blocksize_bits = PAGE_SHIFT;
-+	sb->s_magic = VORTEIL_MAGIC;
-+	sb->s_op = &vorteilfs_ops;
-+	inode = vorteilfs_get_inode(sb, S_IFDIR | 0644);
-+	sb->s_root = d_make_root(inode);
-+	if (!sb->s_root)
-+		return -ENOMEM;
-+
-+	return 0;
-+}
-+
-+static struct inode *vorteilfs_get_inode(struct super_block *sb, umode_t mode)
-+{
-+	struct inode *inode = new_inode(sb);
-+
-+	if (inode) {
-+		inode->i_ino = get_next_ino();
-+		mapping_set_gfp_mask(inode->i_mapping, GFP_HIGHUSER);
-+		mapping_set_unevictable(inode->i_mapping);
-+		inode->i_atime = inode->i_mtime = inode->i_ctime =
-+			current_time(inode);
-+		inode->i_mode = mode;
-+
-+		switch (mode & S_IFMT) {
-+		default:
-+			init_special_inode(inode, mode, 0);
-+			break;
-+		case S_IFREG:
-+			inode->i_op = &vorteilfs_file_inode_operations;
-+			inode->i_fop = &vorteilfs_file_operations;
-+			inode->i_data.a_ops = &vorteil_aops;
-+			break;
-+		case S_IFDIR:
-+			inode->i_op = &vorteilfs_dir_inode_operations;
-+			inode->i_fop = &simple_dir_operations;
-+			inc_nlink(inode);
-+			break;
-+		case S_IFLNK:
-+			inode->i_op = &page_symlink_inode_operations;
-+			inode_nohighmem(inode);
-+			break;
-+		}
-+	}
-+	return inode;
-+}
-+
-+static int vorteilfs_mknode(char *parent, char *name, umode_t mode,
-+			    struct inode **inode)
-+{
-+	struct dentry *dentry;
-+
-+	sb_start_write(pathParent.dentry->d_sb);
-+	inode_lock(pathParent.dentry->d_inode);
-+
-+	dentry = lookup_one_len(name, pathParent.dentry, strlen(name));
-+	if (IS_ERR(dentry)) {
-+		return -EINVAL;
-+	}
-+
-+	*inode = vorteilfs_get_inode(dentry->d_sb, mode);
-+	d_add(dentry, *inode);
-+
-+	inode_unlock(pathParent.dentry->d_inode);
-+	sb_end_write(pathParent.dentry->d_sb);
-+
-+	return 0;
-+}
-+
-+static void vorteilfs_kill_sb(struct super_block *sb)
-+{
-+	kill_litter_super(sb);
-+}
-+
-+int vorteilfs_create_files(void)
++int create_files(void)
 +{
 +	char *ep, b[VBLOCK_SIZE];
-+	int size, rsize, err;
-+	loff_t o;
-+	struct inode *inode;
++	void *mem;
++	int size, rsize;
++	loff_t o, o2;
 +	struct star_header *sh;
-+	struct inode_details *det;
-+	struct file *f;
++	struct file *f, *f2;
++	char str[128];
 +
-+	printk(KERN_INFO "creating vorteil files from %s\n",
++		printk(KERN_INFO "creating vorteil files from %s\n",
 +	       (char *)vorteil_disk());
 +
 +	f = filp_open(vorteil_disk(), O_RDONLY, 0);
@@ -1069,63 +786,42 @@ index 000000000..edaeac0e1
 +		size = simple_strtol(sh->size, &ep, 8);
 +		rsize = ((size + VBLOCK_SIZE - 1) / VBLOCK_SIZE) * VBLOCK_SIZE;
 +
-+		if ((err = vorteilfs_mknode(VORTEIL_PATH, sh->name,
-+					    S_IFREG | 0750, &inode))) {
-+			return err;
-+		} else {
-+			inode->i_size = size;
-+			det = vmalloc(sizeof(struct inode_details));
-+			memset(det, 0, sizeof(struct inode_details));
-+			det->disk_offset = o;
-+			det->disk_size = rsize;
-+			inode->i_private = det;
++		// we don't add linux in
++		if (strcmp(sh->name, "linux") == 0) {
++			o += rsize;
++			continue;
 +		}
 +
-+		o += rsize;
++		sprintf(str, "/vorteil/%s", sh->name);
++
++		printk(KERN_INFO "creating node %s (%d bytes)", str, rsize);
++
++		f2 = filp_open(str, O_CREAT | O_LARGEFILE | O_RDWR,
++			       S_IFREG | 0750);
++
++		mem = vmalloc(rsize);
++		kernel_read(f, mem, rsize, &o);
++		o2 = 0;
++		kernel_write(f2, mem, rsize, &o2);
++		__fput_sync(f2);
++		vfree(mem);
 +
 +	} while (1);
 +
-+	filp_close(f, 0);
++	fput(f);
 +
 +	return 0;
 +}
 +
-+static struct dentry *vorteilfs_mount(struct file_system_type *fs_type,
-+				      int flags, const char *dev_name,
-+				      void *data)
-+{
-+	struct dentry *d;
-+	d = mount_nodev(fs_type, flags, data, vorteilfs_fill_super);
-+	if (IS_ERR(d)) {
-+		panic("can not mount vorteilfs (init)");
-+	}
-+
-+	return d;
-+}
-+
-+int __init init_vorteilfs_fs(void)
-+{
-+	return register_filesystem(&vorteilfs_fs_type);
-+}
-+
 +void vorteil_setup_fs(void)
 +{
-+	struct inode *inode;
 +
-+	if (do_mount("none", "/vorteil", "vorteilfs", 0, 0)) {
-+		panic("could not mount vorteilfs");
++	if (do_mount("none", "/vorteil", "ramfs", 0, 0)) {
++		panic("could not mount ramfs");
 +	}
++	create_files();
 +
-+	kern_path("/vorteil", LOOKUP_FOLLOW, &pathParent);
-+	inode = pathParent.dentry->d_inode;
-+	inode->i_mode = S_IFREG | 0755;
-+
-+	if (vorteilfs_create_files()) {
-+		panic("could not create file in vorteilfs");
-+	}
 +}
-+
-+fs_initcall(init_vorteilfs_fs);
 diff --git a/drivers/_vorteil/vtty.c b/drivers/_vorteil/vtty.c
 new file mode 100644
 index 000000000..d9faabfc0
