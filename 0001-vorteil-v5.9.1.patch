@@ -1,7 +1,7 @@
-From dbe5ed0c3cc7c1c8d5305468fb222449fe69848c Mon Sep 17 00:00:00 2001
+From 014d63f4143b9be053812d4c95aae4cd299140bd Mon Sep 17 00:00:00 2001
 From: Jens Gerke <jens.gerke@vorteil.io>
-Date: Wed, 21 Oct 2020 08:39:34 +1000
-Subject: [PATCH] log changes
+Date: Wed, 21 Oct 2020 14:53:49 +1000
+Subject: [PATCH] change logging
 
 Signed-off-by: Jens Gerke <jens.gerke@vorteil.io>
 ---
@@ -15,12 +15,12 @@ Signed-off-by: Jens Gerke <jens.gerke@vorteil.io>
  drivers/_vorteil/vlogfs.c     |  277 +++
  drivers/_vorteil/vlogfs_ops.c |  185 ++
  drivers/_vorteil/vorteilfs.c  |  409 ++++
- drivers/_vorteil/vtty.c       |  118 ++
+ drivers/_vorteil/vtty.c       |  119 ++
  drivers/tty/tty_io.c          |    3 +-
  init/do_mounts.c              |   10 +-
  init/main.c                   |    8 +
  linux.config                  | 3316 +++++++++++++++++++++++++++++++++
- 15 files changed, 4481 insertions(+), 3 deletions(-)
+ 15 files changed, 4482 insertions(+), 3 deletions(-)
  create mode 100644 drivers/_vorteil/Kconfig
  create mode 100644 drivers/_vorteil/Makefile
  create mode 100644 drivers/_vorteil/bootdev.c
@@ -1128,10 +1128,10 @@ index 000000000..edaeac0e1
 +fs_initcall(init_vorteilfs_fs);
 diff --git a/drivers/_vorteil/vtty.c b/drivers/_vorteil/vtty.c
 new file mode 100644
-index 000000000..40cc3b8e2
+index 000000000..d9faabfc0
 --- /dev/null
 +++ b/drivers/_vorteil/vtty.c
-@@ -0,0 +1,118 @@
+@@ -0,0 +1,119 @@
 +#include <linux/init.h>
 +#include <linux/kernel.h>
 +#include <linux/cdev.h>
@@ -1181,9 +1181,10 @@ index 000000000..40cc3b8e2
 +	smp_store_release(&ttybuf.head, (ttybuf.head + n) & (TTY_BUF_SIZE - 1));
 +
 +done:;
-+	wake_up(&waitqueue);
 +	*off += n;
 +	spin_unlock(&lock);
++	wake_up(&waitqueue);
++
 +	return n;
 +}
 +
@@ -1192,7 +1193,7 @@ index 000000000..40cc3b8e2
 +	int n;
 +
 +	spin_lock(&lock);
-+	n = min(size, (size_t)circ_count_to_end(&ttybuf));
++	n = min(size, (size_t)circ_count(&ttybuf));
 +	if (n == 0) {
 +		goto done;
 +	}
