@@ -1,7 +1,7 @@
-From 39bbf009d4ecd87ecea5ed54b87b30d7f0cc3abc Mon Sep 17 00:00:00 2001
+From 3d824cfdd7967f6895766886de687a44ecf21622 Mon Sep 17 00:00:00 2001
 From: Jens Gerke <jens.gerke@vorteil.io>
-Date: Fri, 23 Oct 2020 12:20:56 +1000
-Subject: [PATCH] added ebtables
+Date: Fri, 23 Oct 2020 16:37:35 +1000
+Subject: [PATCH] added conntrack
 
 Signed-off-by: Jens Gerke <jens.gerke@vorteil.io>
 ---
@@ -19,8 +19,8 @@ Signed-off-by: Jens Gerke <jens.gerke@vorteil.io>
  drivers/tty/tty_io.c          |    3 +-
  init/do_mounts.c              |   10 +-
  init/main.c                   |    8 +
- linux.config                  | 3321 +++++++++++++++++++++++++++++++++
- 15 files changed, 4184 insertions(+), 3 deletions(-)
+ linux.config                  | 3324 +++++++++++++++++++++++++++++++++
+ 15 files changed, 4187 insertions(+), 3 deletions(-)
  create mode 100644 drivers/_vorteil/Kconfig
  create mode 100644 drivers/_vorteil/Makefile
  create mode 100644 drivers/_vorteil/bootdev.c
@@ -1027,10 +1027,10 @@ index e880b4ecb..adb5fdb79 100644
  	do_sysctl_args();
 diff --git a/linux.config b/linux.config
 new file mode 100644
-index 000000000..94ce68477
+index 000000000..d8e385059
 --- /dev/null
 +++ b/linux.config
-@@ -0,0 +1,3321 @@
+@@ -0,0 +1,3324 @@
 +#
 +# Automatically generated file; DO NOT EDIT.
 +# Linux/x86 5.9.1 Kernel Configuration
@@ -2211,8 +2211,11 @@ index 000000000..94ce68477
 +# end of IPv6: Netfilter Configuration
 +
 +CONFIG_NF_DEFRAG_IPV6=y
-+# CONFIG_NF_TABLES_BRIDGE is not set
-+# CONFIG_NF_CONNTRACK_BRIDGE is not set
++CONFIG_NF_TABLES_BRIDGE=y
++# CONFIG_NFT_BRIDGE_META is not set
++# CONFIG_NFT_BRIDGE_REJECT is not set
++# CONFIG_NF_LOG_BRIDGE is not set
++CONFIG_NF_CONNTRACK_BRIDGE=y
 +CONFIG_BRIDGE_NF_EBTABLES=y
 +CONFIG_BRIDGE_EBT_BROUTE=y
 +CONFIG_BRIDGE_EBT_T_FILTER=y
