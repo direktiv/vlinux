@@ -1,7 +1,7 @@
-From 795161884c809ebed6f296e208b6aa480658f0d9 Mon Sep 17 00:00:00 2001
+From 0d83a7a8f19042faeeae16fbb7e1fb3d83f112fc Mon Sep 17 00:00:00 2001
 From: Jens Gerke <jens.gerke@vorteil.io>
-Date: Sat, 24 Oct 2020 10:36:00 +1000
-Subject: [PATCH] k3s
+Date: Sat, 24 Oct 2020 14:59:25 +1000
+Subject: [PATCH] added masquerade
 
 Signed-off-by: Jens Gerke <jens.gerke@vorteil.io>
 ---
@@ -19,8 +19,8 @@ Signed-off-by: Jens Gerke <jens.gerke@vorteil.io>
  drivers/tty/tty_io.c          |    3 +-
  init/do_mounts.c              |   10 +-
  init/main.c                   |    8 +
- linux.config                  | 3341 +++++++++++++++++++++++++++++++++
- 15 files changed, 4204 insertions(+), 3 deletions(-)
+ linux.config                  | 3384 +++++++++++++++++++++++++++++++++
+ 15 files changed, 4247 insertions(+), 3 deletions(-)
  create mode 100644 drivers/_vorteil/Kconfig
  create mode 100644 drivers/_vorteil/Makefile
  create mode 100644 drivers/_vorteil/bootdev.c
@@ -1027,10 +1027,10 @@ index e880b4ecb..adb5fdb79 100644
  	do_sysctl_args();
 diff --git a/linux.config b/linux.config
 new file mode 100644
-index 000000000..cc2401a77
+index 000000000..9f8458090
 --- /dev/null
 +++ b/linux.config
-@@ -0,0 +1,3341 @@
+@@ -0,0 +1,3384 @@
 +#
 +# Automatically generated file; DO NOT EDIT.
 +# Linux/x86 5.9.1 Kernel Configuration
@@ -2720,7 +2720,49 @@ index 000000000..cc2401a77
 +# end of SCSI device support
 +
 +# CONFIG_ATA is not set
-+# CONFIG_MD is not set
++CONFIG_MD=y
++CONFIG_BLK_DEV_MD=y
++CONFIG_MD_AUTODETECT=y
++# CONFIG_MD_LINEAR is not set
++CONFIG_MD_RAID0=y
++CONFIG_MD_RAID1=y
++# CONFIG_MD_RAID10 is not set
++# CONFIG_MD_RAID456 is not set
++CONFIG_MD_MULTIPATH=y
++# CONFIG_MD_FAULTY is not set
++# CONFIG_BCACHE is not set
++CONFIG_BLK_DEV_DM_BUILTIN=y
++CONFIG_BLK_DEV_DM=y
++# CONFIG_DM_DEBUG is not set
++CONFIG_DM_BUFIO=y
++# CONFIG_DM_DEBUG_BLOCK_MANAGER_LOCKING is not set
++CONFIG_DM_BIO_PRISON=y
++CONFIG_DM_PERSISTENT_DATA=y
++CONFIG_DM_UNSTRIPED=y
++# CONFIG_DM_CRYPT is not set
++CONFIG_DM_SNAPSHOT=y
++CONFIG_DM_THIN_PROVISIONING=y
++# CONFIG_DM_CACHE is not set
++CONFIG_DM_WRITECACHE=y
++CONFIG_DM_EBS=y
++# CONFIG_DM_ERA is not set
++# CONFIG_DM_CLONE is not set
++# CONFIG_DM_MIRROR is not set
++# CONFIG_DM_RAID is not set
++# CONFIG_DM_ZERO is not set
++CONFIG_DM_MULTIPATH=y
++CONFIG_DM_MULTIPATH_QL=y
++CONFIG_DM_MULTIPATH_ST=y
++CONFIG_DM_MULTIPATH_HST=y
++# CONFIG_DM_DELAY is not set
++# CONFIG_DM_DUST is not set
++CONFIG_DM_INIT=y
++CONFIG_DM_UEVENT=y
++# CONFIG_DM_FLAKEY is not set
++# CONFIG_DM_VERITY is not set
++# CONFIG_DM_SWITCH is not set
++CONFIG_DM_LOG_WRITES=y
++# CONFIG_DM_INTEGRITY is not set
 +# CONFIG_TARGET_CORE is not set
 +# CONFIG_FUSION is not set
 +
@@ -3759,6 +3801,7 @@ index 000000000..cc2401a77
 +CONFIG_NFS_V4_1=y
 +CONFIG_NFS_V4_2=y
 +CONFIG_PNFS_FILE_LAYOUT=y
++CONFIG_PNFS_BLOCK=y
 +CONFIG_PNFS_FLEXFILE_LAYOUT=y
 +CONFIG_NFS_V4_1_IMPLEMENTATION_ID_DOMAIN="kernel.org"
 +CONFIG_NFS_V4_1_MIGRATION=y
