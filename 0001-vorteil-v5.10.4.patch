@@ -1,7 +1,7 @@
-From 946e35d24c15335e48aceee86eb8d9756fb70926 Mon Sep 17 00:00:00 2001
+From 321cf154b447e87faa145a6735a23f2de7b84112 Mon Sep 17 00:00:00 2001
 From: Jens Gerke <jens.gerke@vorteil.io>
-Date: Tue, 10 Nov 2020 08:54:00 +1000
-Subject: [PATCH] 596
+Date: Mon, 4 Jan 2021 17:18:47 +1000
+Subject: [PATCH] mount
 
 Signed-off-by: Jens Gerke <jens.gerke@vorteil.io>
 ---
@@ -14,13 +14,13 @@ Signed-off-by: Jens Gerke <jens.gerke@vorteil.io>
  drivers/_vorteil/internal.h   |   14 +
  drivers/_vorteil/vlogfs.c     |  277 +++
  drivers/_vorteil/vlogfs_ops.c |  185 ++
- drivers/_vorteil/vorteilfs.c  |  106 ++
+ drivers/_vorteil/vorteilfs.c  |  124 ++
  drivers/_vorteil/vtty.c       |  119 ++
  drivers/tty/tty_io.c          |    3 +-
  init/do_mounts.c              |   10 +-
  init/main.c                   |    8 +
  linux.config                  | 3384 +++++++++++++++++++++++++++++++++
- 15 files changed, 4247 insertions(+), 3 deletions(-)
+ 15 files changed, 4265 insertions(+), 3 deletions(-)
  create mode 100644 drivers/_vorteil/Kconfig
  create mode 100644 drivers/_vorteil/Makefile
  create mode 100644 drivers/_vorteil/bootdev.c
@@ -44,10 +44,10 @@ index dcecc9f6e..dacabbfc2 100644
 +source "drivers/_vorteil/Kconfig"
  endmenu
 diff --git a/drivers/Makefile b/drivers/Makefile
-index c0cd1b907..49f5a1fa8 100644
+index 576228037..33e95d2ea 100644
 --- a/drivers/Makefile
 +++ b/drivers/Makefile
-@@ -188,3 +188,4 @@ obj-$(CONFIG_GNSS)		+= gnss/
+@@ -189,3 +189,4 @@ obj-$(CONFIG_GNSS)		+= gnss/
  obj-$(CONFIG_INTERCONNECT)	+= interconnect/
  obj-$(CONFIG_COUNTER)		+= counter/
  obj-$(CONFIG_MOST)		+= most/
@@ -713,10 +713,10 @@ index 000000000..b6b839c4d
 +};
 diff --git a/drivers/_vorteil/vorteilfs.c b/drivers/_vorteil/vorteilfs.c
 new file mode 100644
-index 000000000..914e36e07
+index 000000000..cd7eb633a
 --- /dev/null
 +++ b/drivers/_vorteil/vorteilfs.c
-@@ -0,0 +1,106 @@
+@@ -0,0 +1,124 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + *
@@ -814,12 +814,30 @@ index 000000000..914e36e07
 +	return 0;
 +}
 +
++
++extern int path_mount(const char *dev_name, struct path *path,
++		const char *type_page, unsigned long flags, void *data_page);
 +void vorteil_setup_fs(void)
 +{
 +
-+	if (do_mount("none", "/vorteil", "ramfs", 0, 0)) {
-+		panic("could not mount ramfs");
++	struct path path;
++	int ret;
++
++	ret =	kern_path("/vorteil", LOOKUP_FOLLOW, &path);
++	if (ret) {
++		panic("could not find /vorteil directory");
 +	}
++
++	ret  = path_mount("none", &path, "ramfs", 0, NULL);
++	if (ret) {
++			panic("could not mount ramfs");
++	}
++	path_put(&path);
++
++
++	// if (do_mount("none", "/vorteil", "ramfs", 0, 0)) {
++	// 	panic("could not mount ramfs");
++	// }
 +	create_files();
 +
 +}
@@ -949,7 +967,7 @@ index 000000000..d9faabfc0
 +
 +device_initcall(init_vtty);
 diff --git a/drivers/tty/tty_io.c b/drivers/tty/tty_io.c
-index ceed72c9a..beafc2427 100644
+index 56ade99ef..a38b9d077 100644
 --- a/drivers/tty/tty_io.c
 +++ b/drivers/tty/tty_io.c
 @@ -2869,7 +2869,7 @@ static int this_tty(const void *t, struct file *file, unsigned fd)
@@ -961,7 +979,7 @@ index ceed72c9a..beafc2427 100644
  /*
   * This implements the "Secure Attention Key" ---  the idea is to
   * prevent trojan horses by killing all processes associated with this
-@@ -3508,4 +3508,3 @@ int __init tty_init(void)
+@@ -3513,4 +3513,3 @@ int __init tty_init(void)
  #endif
  	return 0;
  }
@@ -1000,10 +1018,10 @@ index b5f9604d0..5912a6b7e 100644
  #endif
  }
 diff --git a/init/main.c b/init/main.c
-index e880b4ecb..adb5fdb79 100644
+index 32b2a8aff..c7a4a9c30 100644
 --- a/init/main.c
 +++ b/init/main.c
-@@ -1396,6 +1396,9 @@ void __weak free_initmem(void)
+@@ -1408,6 +1408,9 @@ void __weak free_initmem(void)
  	free_initmem_default(POISON_FREE_INITMEM);
  }
  
@@ -1013,7 +1031,7 @@ index e880b4ecb..adb5fdb79 100644
  static int __ref kernel_init(void *unused)
  {
  	int ret;
-@@ -1417,6 +1420,11 @@ static int __ref kernel_init(void *unused)
+@@ -1429,6 +1432,11 @@ static int __ref kernel_init(void *unused)
  	system_state = SYSTEM_RUNNING;
  	numa_default_policy();
  
@@ -1027,19 +1045,20 @@ index e880b4ecb..adb5fdb79 100644
  	do_sysctl_args();
 diff --git a/linux.config b/linux.config
 new file mode 100644
-index 000000000..70d24124f
+index 000000000..99d557b5f
 --- /dev/null
 +++ b/linux.config
 @@ -0,0 +1,3384 @@
 +#
 +# Automatically generated file; DO NOT EDIT.
-+# Linux/x86 5.9.6 Kernel Configuration
++# Linux/x86 5.10.4 Kernel Configuration
 +#
 +CONFIG_CC_VERSION_TEXT="gcc (Ubuntu 9.3.0-17ubuntu1~20.04) 9.3.0"
 +CONFIG_CC_IS_GCC=y
 +CONFIG_GCC_VERSION=90300
 +CONFIG_LD_VERSION=234000000
 +CONFIG_CLANG_VERSION=0
++CONFIG_LLD_VERSION=0
 +CONFIG_CC_CAN_LINK=y
 +CONFIG_CC_CAN_LINK_STATIC=y
 +CONFIG_CC_HAS_ASM_GOTO=y
@@ -1155,6 +1174,8 @@ index 000000000..70d24124f
 +# CONFIG_RCU_EXPERT is not set
 +CONFIG_SRCU=y
 +CONFIG_TREE_SRCU=y
++CONFIG_TASKS_RCU_GENERIC=y
++CONFIG_TASKS_TRACE_RCU=y
 +CONFIG_RCU_STALL_COMMON=y
 +CONFIG_RCU_NEED_SEGCBLIST=y
 +# end of RCU Subsystem
@@ -1216,6 +1237,7 @@ index 000000000..70d24124f
 +# CONFIG_BOOT_CONFIG is not set
 +CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE=y
 +# CONFIG_CC_OPTIMIZE_FOR_SIZE is not set
++CONFIG_LD_ORPHAN_WARN=y
 +CONFIG_SYSCTL=y
 +CONFIG_SYSCTL_EXCEPTION_TRACE=y
 +CONFIG_HAVE_PCSPKR_PLATFORM=y
@@ -1249,6 +1271,7 @@ index 000000000..70d24124f
 +CONFIG_KALLSYMS_BASE_RELATIVE=y
 +CONFIG_BPF_SYSCALL=y
 +CONFIG_ARCH_WANT_DEFAULT_BPF_JIT=y
++# CONFIG_BPF_PRELOAD is not set
 +CONFIG_USERFAULTFD=y
 +CONFIG_ARCH_HAS_MEMBARRIER_SYNC_CORE=y
 +CONFIG_RSEQ=y
@@ -1436,7 +1459,6 @@ index 000000000..70d24124f
 +# CONFIG_X86_INTEL_TSX_MODE_ON is not set
 +# CONFIG_X86_INTEL_TSX_MODE_AUTO is not set
 +# CONFIG_EFI is not set
-+CONFIG_SECCOMP=y
 +CONFIG_HZ_100=y
 +# CONFIG_HZ_250 is not set
 +# CONFIG_HZ_300 is not set
@@ -1529,9 +1551,9 @@ index 000000000..70d24124f
 +CONFIG_HAVE_ACPI_APEI=y
 +CONFIG_HAVE_ACPI_APEI_NMI=y
 +# CONFIG_ACPI_APEI is not set
-+# CONFIG_DPTF_POWER is not set
-+# CONFIG_PMIC_OPREGION is not set
++# CONFIG_ACPI_DPTF is not set
 +# CONFIG_ACPI_CONFIGFS is not set
++# CONFIG_PMIC_OPREGION is not set
 +CONFIG_X86_PM_TIMER=y
 +# CONFIG_SFI is not set
 +
@@ -1610,7 +1632,6 @@ index 000000000..70d24124f
 +# CONFIG_ISCSI_IBFT is not set
 +# CONFIG_FW_CFG_SYSFS is not set
 +# CONFIG_GOOGLE_FIRMWARE is not set
-+CONFIG_EFI_EARLYCON=y
 +
 +#
 +# Tegra firmware driver
@@ -1637,6 +1658,7 @@ index 000000000..70d24124f
 +CONFIG_OPROFILE_NMI_TIMER=y
 +CONFIG_JUMP_LABEL=y
 +# CONFIG_STATIC_KEYS_SELFTEST is not set
++# CONFIG_STATIC_CALL_SELFTEST is not set
 +CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS=y
 +CONFIG_ARCH_USE_BUILTIN_BSWAP=y
 +CONFIG_HAVE_IOREMAP_PROT=y
@@ -1673,7 +1695,9 @@ index 000000000..70d24124f
 +CONFIG_HAVE_ALIGNED_STRUCT_PAGE=y
 +CONFIG_HAVE_CMPXCHG_LOCAL=y
 +CONFIG_HAVE_CMPXCHG_DOUBLE=y
++CONFIG_HAVE_ARCH_SECCOMP=y
 +CONFIG_HAVE_ARCH_SECCOMP_FILTER=y
++CONFIG_SECCOMP=y
 +CONFIG_SECCOMP_FILTER=y
 +CONFIG_HAVE_ARCH_STACKLEAK=y
 +CONFIG_HAVE_STACKPROTECTOR=y
@@ -1707,6 +1731,9 @@ index 000000000..70d24124f
 +CONFIG_ARCH_USE_MEMREMAP_PROT=y
 +# CONFIG_LOCK_EVENT_COUNTS is not set
 +CONFIG_ARCH_HAS_MEM_ENCRYPT=y
++CONFIG_HAVE_STATIC_CALL=y
++CONFIG_HAVE_STATIC_CALL_INLINE=y
++CONFIG_ARCH_WANT_LD_ORPHAN_WARN=y
 +
 +#
 +# GCOV-based kernel profiling
@@ -2607,15 +2634,6 @@ index 000000000..70d24124f
 +# CONFIG_INTEL_MEI_ME is not set
 +# CONFIG_INTEL_MEI_TXE is not set
 +CONFIG_VMWARE_VMCI=y
-+
-+#
-+# Intel MIC & related support
-+#
-+# CONFIG_INTEL_MIC_BUS is not set
-+# CONFIG_SCIF_BUS is not set
-+# CONFIG_VOP_BUS is not set
-+# end of Intel MIC & related support
-+
 +# CONFIG_GENWQE is not set
 +# CONFIG_ECHO is not set
 +# CONFIG_MISC_ALCOR_PCI is not set
@@ -2888,8 +2906,14 @@ index 000000000..70d24124f
 +# CONFIG_FDDI is not set
 +# CONFIG_HIPPI is not set
 +# CONFIG_NET_SB1000 is not set
-+# CONFIG_MDIO_DEVICE is not set
 +# CONFIG_PHYLIB is not set
++# CONFIG_MDIO_DEVICE is not set
++
++#
++# PCS device drivers
++#
++# end of PCS device drivers
++
 +# CONFIG_PPP is not set
 +# CONFIG_SLIP is not set
 +
@@ -3101,7 +3125,6 @@ index 000000000..70d24124f
 +# CONFIG_PINCTRL is not set
 +# CONFIG_GPIOLIB is not set
 +# CONFIG_W1 is not set
-+# CONFIG_POWER_AVS is not set
 +# CONFIG_POWER_RESET is not set
 +CONFIG_POWER_SUPPLY=y
 +# CONFIG_POWER_SUPPLY_DEBUG is not set
@@ -3307,6 +3330,7 @@ index 000000000..70d24124f
 +# CONFIG_HID_GEMBIRD is not set
 +# CONFIG_HID_GFRM is not set
 +# CONFIG_HID_GLORIOUS is not set
++# CONFIG_HID_VIVALDI is not set
 +# CONFIG_HID_KEYTOUCH is not set
 +# CONFIG_HID_KYE is not set
 +# CONFIG_HID_WALTOP is not set
@@ -3421,6 +3445,7 @@ index 000000000..70d24124f
 +# CONFIG_VFIO is not set
 +CONFIG_VIRT_DRIVERS=y
 +# CONFIG_VBOXGUEST is not set
++# CONFIG_NITRO_ENCLAVES is not set
 +CONFIG_VIRTIO=y
 +CONFIG_VIRTIO_MENU=y
 +CONFIG_VIRTIO_PCI=y
@@ -3480,7 +3505,6 @@ index 000000000..70d24124f
 +# CONFIG_STAGING is not set
 +# CONFIG_X86_PLATFORM_DEVICES is not set
 +CONFIG_PMC_ATOM=y
-+# CONFIG_MFD_CROS_EC is not set
 +# CONFIG_CHROME_PLATFORMS is not set
 +# CONFIG_MELLANOX_PLATFORM is not set
 +CONFIG_HAVE_CLK=y
@@ -3596,7 +3620,7 @@ index 000000000..70d24124f
 +# CONFIG_BCM_KONA_USB2_PHY is not set
 +# CONFIG_PHY_PXA_28NM_HSIC is not set
 +# CONFIG_PHY_PXA_28NM_USB2 is not set
-+# CONFIG_PHY_INTEL_EMMC is not set
++# CONFIG_PHY_INTEL_LGM_EMMC is not set
 +# end of PHY Subsystem
 +
 +# CONFIG_POWERCAP is not set
@@ -3658,6 +3682,7 @@ index 000000000..70d24124f
 +# CONFIG_REISERFS_FS is not set
 +# CONFIG_JFS_FS is not set
 +CONFIG_XFS_FS=y
++CONFIG_XFS_SUPPORT_V4=y
 +# CONFIG_XFS_QUOTA is not set
 +CONFIG_XFS_POSIX_ACL=y
 +# CONFIG_XFS_RT is not set
@@ -3808,6 +3833,7 @@ index 000000000..70d24124f
 +# CONFIG_NFS_USE_LEGACY_DNS is not set
 +CONFIG_NFS_USE_KERNEL_DNS=y
 +CONFIG_NFS_DISABLE_UDP_SUPPORT=y
++# CONFIG_NFS_V4_2_READ_PLUS is not set
 +# CONFIG_NFSD is not set
 +CONFIG_GRACE_PERIOD=y
 +CONFIG_LOCKD=y
@@ -3967,6 +3993,7 @@ index 000000000..70d24124f
 +CONFIG_CRYPTO_ECC=y
 +CONFIG_CRYPTO_ECDH=y
 +# CONFIG_CRYPTO_ECRDSA is not set
++# CONFIG_CRYPTO_SM2 is not set
 +# CONFIG_CRYPTO_CURVE25519 is not set
 +# CONFIG_CRYPTO_CURVE25519_X86 is not set
 +
@@ -4049,8 +4076,6 @@ index 000000000..70d24124f
 +CONFIG_CRYPTO_AES=y
 +CONFIG_CRYPTO_AES_TI=y
 +# CONFIG_CRYPTO_AES_NI_INTEL is not set
-+# CONFIG_CRYPTO_ANUBIS is not set
-+# CONFIG_CRYPTO_ARC4 is not set
 +# CONFIG_CRYPTO_BLOWFISH is not set
 +# CONFIG_CRYPTO_BLOWFISH_X86_64 is not set
 +# CONFIG_CRYPTO_CAMELLIA is not set
@@ -4064,17 +4089,14 @@ index 000000000..70d24124f
 +# CONFIG_CRYPTO_DES is not set
 +# CONFIG_CRYPTO_DES3_EDE_X86_64 is not set
 +# CONFIG_CRYPTO_FCRYPT is not set
-+# CONFIG_CRYPTO_KHAZAD is not set
 +# CONFIG_CRYPTO_SALSA20 is not set
 +# CONFIG_CRYPTO_CHACHA20 is not set
 +# CONFIG_CRYPTO_CHACHA20_X86_64 is not set
-+# CONFIG_CRYPTO_SEED is not set
 +# CONFIG_CRYPTO_SERPENT is not set
 +# CONFIG_CRYPTO_SERPENT_SSE2_X86_64 is not set
 +# CONFIG_CRYPTO_SERPENT_AVX_X86_64 is not set
 +# CONFIG_CRYPTO_SERPENT_AVX2_X86_64 is not set
 +# CONFIG_CRYPTO_SM4 is not set
-+# CONFIG_CRYPTO_TEA is not set
 +# CONFIG_CRYPTO_TWOFISH is not set
 +# CONFIG_CRYPTO_TWOFISH_X86_64 is not set
 +# CONFIG_CRYPTO_TWOFISH_X86_64_3WAY is not set
@@ -4216,9 +4238,6 @@ index 000000000..70d24124f
 +CONFIG_HAVE_GENERIC_VDSO=y
 +CONFIG_GENERIC_GETTIMEOFDAY=y
 +CONFIG_GENERIC_VDSO_TIME_NS=y
-+CONFIG_FONT_SUPPORT=y
-+CONFIG_FONT_8x16=y
-+CONFIG_FONT_AUTOSELECT=y
 +CONFIG_SG_POOL=y
 +CONFIG_ARCH_HAS_PMEM_API=y
 +CONFIG_ARCH_HAS_UACCESS_FLUSHCACHE=y
@@ -4395,7 +4414,6 @@ index 000000000..70d24124f
 +# CONFIG_TEST_KSTRTOX is not set
 +# CONFIG_TEST_PRINTF is not set
 +# CONFIG_TEST_BITMAP is not set
-+# CONFIG_TEST_BITFIELD is not set
 +# CONFIG_TEST_UUID is not set
 +# CONFIG_TEST_XARRAY is not set
 +# CONFIG_TEST_OVERFLOW is not set
