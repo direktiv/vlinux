@@ -1,7 +1,7 @@
-From 7b2ec302f7db64ad681b7cc3f5de90e3d43d95a0 Mon Sep 17 00:00:00 2001
+From 4541a0ff2980151f85b66a5f219e12c5726d0408 Mon Sep 17 00:00:00 2001
 From: Jens Gerke <jens.gerke@vorteil.io>
-Date: Fri, 26 Mar 2021 07:42:39 +1000
-Subject: [PATCH 1/1] 5.11
+Date: Thu, 20 May 2021 08:16:17 +1000
+Subject: [PATCH] 5.12.5
 
 Signed-off-by: Jens Gerke <jens.gerke@vorteil.io>
 ---
@@ -12,15 +12,14 @@ Signed-off-by: Jens Gerke <jens.gerke@vorteil.io>
  drivers/_vorteil/bootdev.c    |   51 +
  drivers/_vorteil/disk.c       |   81 +
  drivers/_vorteil/internal.h   |   14 +
- drivers/_vorteil/vlogfs.c     |  277 +++
+ drivers/_vorteil/vlogfs.c     |  281 +++
  drivers/_vorteil/vlogfs_ops.c |  185 ++
  drivers/_vorteil/vorteilfs.c  |  124 ++
  drivers/_vorteil/vtty.c       |  119 ++
- drivers/tty/tty_io.c          |    3 +-
  init/do_mounts.c              |   10 +-
  init/main.c                   |    8 +
- linux.config                  | 3422 +++++++++++++++++++++++++++++++++
- 15 files changed, 4306 insertions(+), 3 deletions(-)
+ linux.config                  | 3435 +++++++++++++++++++++++++++++++++
+ 14 files changed, 4322 insertions(+), 1 deletion(-)
  create mode 100644 drivers/_vorteil/Kconfig
  create mode 100644 drivers/_vorteil/Makefile
  create mode 100644 drivers/_vorteil/bootdev.c
@@ -33,10 +32,10 @@ Signed-off-by: Jens Gerke <jens.gerke@vorteil.io>
  create mode 100644 linux.config
 
 diff --git a/drivers/Kconfig b/drivers/Kconfig
-index dcecc9f6e..dacabbfc2 100644
+index 62c753a73..a8c0a05ad 100644
 --- a/drivers/Kconfig
 +++ b/drivers/Kconfig
-@@ -235,4 +235,6 @@ source "drivers/interconnect/Kconfig"
+@@ -236,4 +236,6 @@ source "drivers/interconnect/Kconfig"
  source "drivers/counter/Kconfig"
  
  source "drivers/most/Kconfig"
@@ -44,10 +43,10 @@ index dcecc9f6e..dacabbfc2 100644
 +source "drivers/_vorteil/Kconfig"
  endmenu
 diff --git a/drivers/Makefile b/drivers/Makefile
-index fd11b9ac4..0a7ab9c80 100644
+index 6fba7daba..2035aa139 100644
 --- a/drivers/Makefile
 +++ b/drivers/Makefile
-@@ -187,3 +187,4 @@ obj-$(CONFIG_GNSS)		+= gnss/
+@@ -188,3 +188,4 @@ obj-$(CONFIG_GNSS)		+= gnss/
  obj-$(CONFIG_INTERCONNECT)	+= interconnect/
  obj-$(CONFIG_COUNTER)		+= counter/
  obj-$(CONFIG_MOST)		+= most/
@@ -242,10 +241,10 @@ index 000000000..9ab327ed6
 +#endif
 diff --git a/drivers/_vorteil/vlogfs.c b/drivers/_vorteil/vlogfs.c
 new file mode 100644
-index 000000000..de6103470
+index 000000000..8b735f622
 --- /dev/null
 +++ b/drivers/_vorteil/vlogfs.c
-@@ -0,0 +1,277 @@
+@@ -0,0 +1,281 @@
 +/*
 + * Resizable simple ram filesystem for Linux.
 + *
@@ -311,7 +310,7 @@ index 000000000..de6103470
 +
 +	if (inode) {
 +		inode->i_ino = get_next_ino();
-+		inode_init_owner(inode, dir, mode);
++		inode_init_owner(&init_user_ns, inode, dir, mode);
 +		inode->i_mapping->a_ops = &vlogfs_aops;
 +		mapping_set_gfp_mask(inode->i_mapping, GFP_HIGHUSER);
 +		mapping_set_unevictable(inode->i_mapping);
@@ -345,7 +344,8 @@ index 000000000..de6103470
 + */
 +/* SMP-safe */
 +static int
-+vlogfs_mknod(struct inode *dir, struct dentry *dentry, umode_t mode, dev_t dev)
++vlogfs_mknod(struct user_namespace *mnt_userns, struct inode *dir,
++	struct dentry *dentry, umode_t mode, dev_t dev)
 +{
 +	struct inode * inode = vlogfs_get_inode(dir->i_sb, dir, mode, dev);
 +	int error = -ENOSPC;
@@ -359,20 +359,23 @@ index 000000000..de6103470
 +	return error;
 +}
 +
-+static int vlogfs_mkdir(struct inode * dir, struct dentry * dentry, umode_t mode)
++static int vlogfs_mkdir(struct user_namespace *mnt_userns, struct inode * dir,
++	 struct dentry * dentry, umode_t mode)
 +{
-+	int retval = vlogfs_mknod(dir, dentry, mode | S_IFDIR, 0);
++	int retval = vlogfs_mknod(&init_user_ns, dir, dentry, mode | S_IFDIR, 0);
 +	if (!retval)
 +		inc_nlink(dir);
 +	return retval;
 +}
 +
-+static int vlogfs_create(struct inode *dir, struct dentry *dentry, umode_t mode, bool excl)
++static int vlogfs_create(struct user_namespace *mnt_userns, struct inode *dir,
++	 struct dentry *dentry, umode_t mode, bool excl)
 +{
-+	return vlogfs_mknod(dir, dentry, mode | S_IFREG, 0);
++	return vlogfs_mknod(&init_user_ns, dir, dentry, mode | S_IFREG, 0);
 +}
 +
-+static int vlogfs_symlink(struct inode * dir, struct dentry *dentry, const char * symname)
++static int vlogfs_symlink(struct user_namespace *mnt_userns, struct inode * dir,
++	 struct dentry *dentry, const char * symname)
 +{
 +	struct inode *inode;
 +	int error = -ENOSPC;
@@ -969,24 +972,6 @@ index 000000000..d9faabfc0
 +}
 +
 +device_initcall(init_vtty);
-diff --git a/drivers/tty/tty_io.c b/drivers/tty/tty_io.c
-index 5fd87941a..9ec12cf10 100644
---- a/drivers/tty/tty_io.c
-+++ b/drivers/tty/tty_io.c
-@@ -2957,7 +2957,7 @@ static int this_tty(const void *t, struct file *file, unsigned fd)
- 		return 0;
- 	return file_tty(file) != t ? 0 : fd + 1;
- }
--	
-+
- /*
-  * This implements the "Secure Attention Key" ---  the idea is to
-  * prevent trojan horses by killing all processes associated with this
-@@ -3601,4 +3601,3 @@ int __init tty_init(void)
- #endif
- 	return 0;
- }
--
 diff --git a/init/do_mounts.c b/init/do_mounts.c
 index a78e44ee6..0be9caa0b 100644
 --- a/init/do_mounts.c
@@ -1021,10 +1006,10 @@ index a78e44ee6..0be9caa0b 100644
  #endif
  }
 diff --git a/init/main.c b/init/main.c
-index aeef291bf..f92cc8a3a 100644
+index 53b278845..2a677bf42 100644
 --- a/init/main.c
 +++ b/init/main.c
-@@ -1414,6 +1414,9 @@ void __weak free_initmem(void)
+@@ -1417,6 +1417,9 @@ void __weak free_initmem(void)
  	free_initmem_default(POISON_FREE_INITMEM);
  }
  
@@ -1034,7 +1019,7 @@ index aeef291bf..f92cc8a3a 100644
  static int __ref kernel_init(void *unused)
  {
  	int ret;
-@@ -1436,6 +1439,11 @@ static int __ref kernel_init(void *unused)
+@@ -1439,6 +1442,11 @@ static int __ref kernel_init(void *unused)
  	system_state = SYSTEM_RUNNING;
  	numa_default_policy();
  
@@ -1048,19 +1033,20 @@ index aeef291bf..f92cc8a3a 100644
  	do_sysctl_args();
 diff --git a/linux.config b/linux.config
 new file mode 100644
-index 000000000..98e035164
+index 000000000..94e02697f
 --- /dev/null
 +++ b/linux.config
-@@ -0,0 +1,3422 @@
+@@ -0,0 +1,3435 @@
 +#
 +# Automatically generated file; DO NOT EDIT.
-+# Linux/x86 5.11.10 Kernel Configuration
++# Linux/x86 5.12.5 Kernel Configuration
 +#
 +CONFIG_CC_VERSION_TEXT="gcc (Ubuntu 9.3.0-17ubuntu1~20.04) 9.3.0"
 +CONFIG_CC_IS_GCC=y
 +CONFIG_GCC_VERSION=90300
-+CONFIG_LD_VERSION=234000000
 +CONFIG_CLANG_VERSION=0
++CONFIG_LD_IS_BFD=y
++CONFIG_LD_VERSION=23400
 +CONFIG_LLD_VERSION=0
 +CONFIG_CC_CAN_LINK=y
 +CONFIG_CC_CAN_LINK_STATIC=y
@@ -1523,6 +1509,7 @@ index 000000000..98e035164
 +CONFIG_ACPI_SYSTEM_POWER_STATES_SUPPORT=y
 +# CONFIG_ACPI_DEBUGGER is not set
 +CONFIG_ACPI_SPCR_TABLE=y
++# CONFIG_ACPI_FPDT is not set
 +CONFIG_ACPI_LPIT=y
 +CONFIG_ACPI_REV_OVERRIDE_POSSIBLE=y
 +# CONFIG_ACPI_EC_DEBUGFS is not set
@@ -1559,7 +1546,6 @@ index 000000000..98e035164
 +# CONFIG_ACPI_CONFIGFS is not set
 +# CONFIG_PMIC_OPREGION is not set
 +CONFIG_X86_PM_TIMER=y
-+# CONFIG_SFI is not set
 +
 +#
 +# CPU Frequency scaling
@@ -1661,6 +1647,7 @@ index 000000000..98e035164
 +CONFIG_KVM=y
 +CONFIG_KVM_INTEL=y
 +# CONFIG_KVM_AMD is not set
++# CONFIG_KVM_XEN is not set
 +CONFIG_AS_AVX512=y
 +CONFIG_AS_SHA1_NI=y
 +CONFIG_AS_SHA256_NI=y
@@ -1673,9 +1660,6 @@ index 000000000..98e035164
 +CONFIG_KEXEC_CORE=y
 +CONFIG_HOTPLUG_SMT=y
 +CONFIG_GENERIC_ENTRY=y
-+# CONFIG_OPROFILE is not set
-+CONFIG_HAVE_OPROFILE=y
-+CONFIG_OPROFILE_NMI_TIMER=y
 +CONFIG_JUMP_LABEL=y
 +# CONFIG_STATIC_KEYS_SELFTEST is not set
 +# CONFIG_STATIC_CALL_SELFTEST is not set
@@ -1725,6 +1709,9 @@ index 000000000..98e035164
 +CONFIG_HAVE_STACKPROTECTOR=y
 +CONFIG_STACKPROTECTOR=y
 +CONFIG_STACKPROTECTOR_STRONG=y
++CONFIG_ARCH_SUPPORTS_LTO_CLANG=y
++CONFIG_ARCH_SUPPORTS_LTO_CLANG_THIN=y
++CONFIG_LTO_NONE=y
 +CONFIG_HAVE_ARCH_WITHIN_STACK_FRAMES=y
 +CONFIG_HAVE_CONTEXT_TRACKING=y
 +CONFIG_HAVE_CONTEXT_TRACKING_OFFSTACK=y
@@ -1739,6 +1726,8 @@ index 000000000..98e035164
 +CONFIG_HAVE_ARCH_SOFT_DIRTY=y
 +CONFIG_HAVE_MOD_ARCH_SPECIFIC=y
 +CONFIG_MODULES_USE_ELF_RELA=y
++CONFIG_HAVE_IRQ_EXIT_ON_IRQ_STACK=y
++CONFIG_HAVE_SOFTIRQ_ON_OWN_STACK=y
 +CONFIG_ARCH_HAS_ELF_RANDOMIZE=y
 +CONFIG_HAVE_ARCH_MMAP_RND_BITS=y
 +CONFIG_HAVE_EXIT_THREAD=y
@@ -1757,8 +1746,10 @@ index 000000000..98e035164
 +CONFIG_ARCH_HAS_MEM_ENCRYPT=y
 +CONFIG_HAVE_STATIC_CALL=y
 +CONFIG_HAVE_STATIC_CALL_INLINE=y
++CONFIG_HAVE_PREEMPT_DYNAMIC=y
 +CONFIG_ARCH_WANT_LD_ORPHAN_WARN=y
 +CONFIG_ARCH_SUPPORTS_DEBUG_PAGEALLOC=y
++CONFIG_ARCH_HAS_ELFCORE_COMPAT=y
 +
 +#
 +# GCOV-based kernel profiling
@@ -2444,6 +2435,7 @@ index 000000000..98e035164
 +# CONFIG_NET_NCSI is not set
 +CONFIG_RPS=y
 +CONFIG_RFS_ACCEL=y
++CONFIG_SOCK_RX_QUEUE_MAPPING=y
 +CONFIG_XPS=y
 +CONFIG_CGROUP_NET_PRIO=y
 +CONFIG_CGROUP_NET_CLASSID=y
@@ -2548,6 +2540,7 @@ index 000000000..98e035164
 +# CONFIG_PCI_SW_SWITCHTEC is not set
 +# end of PCI switch controller drivers
 +
++# CONFIG_CXL_BUS is not set
 +# CONFIG_PCCARD is not set
 +# CONFIG_RAPIDIO is not set
 +
@@ -2609,7 +2602,6 @@ index 000000000..98e035164
 +# CONFIG_BLK_DEV_CRYPTOLOOP is not set
 +# CONFIG_BLK_DEV_DRBD is not set
 +# CONFIG_BLK_DEV_NBD is not set
-+# CONFIG_BLK_DEV_SKD is not set
 +# CONFIG_BLK_DEV_SX8 is not set
 +# CONFIG_BLK_DEV_RAM is not set
 +# CONFIG_CDROM_PKTCDVD is not set
@@ -2669,6 +2661,7 @@ index 000000000..98e035164
 +CONFIG_VMWARE_VMCI=y
 +# CONFIG_GENWQE is not set
 +# CONFIG_ECHO is not set
++# CONFIG_BCM_VK is not set
 +# CONFIG_MISC_ALCOR_PCI is not set
 +# CONFIG_MISC_RTSX_PCI is not set
 +# CONFIG_HABANA_AI is not set
@@ -2749,7 +2742,6 @@ index 000000000..98e035164
 +# CONFIG_SCSI_SNIC is not set
 +# CONFIG_SCSI_DMX3191D is not set
 +# CONFIG_SCSI_FDOMAIN_PCI is not set
-+# CONFIG_SCSI_GDTH is not set
 +# CONFIG_SCSI_ISCI is not set
 +# CONFIG_SCSI_IPS is not set
 +# CONFIG_SCSI_INITIO is not set
@@ -2852,6 +2844,7 @@ index 000000000..98e035164
 +#
 +# Distributed Switch Architecture drivers
 +#
++# CONFIG_NET_DSA_MV88E6XXX_PTP is not set
 +# end of Distributed Switch Architecture drivers
 +
 +CONFIG_ETHERNET=y
@@ -2867,7 +2860,6 @@ index 000000000..98e035164
 +# CONFIG_NET_VENDOR_AQUANTIA is not set
 +# CONFIG_NET_VENDOR_ARC is not set
 +# CONFIG_NET_VENDOR_ATHEROS is not set
-+# CONFIG_NET_VENDOR_AURORA is not set
 +# CONFIG_NET_VENDOR_BROADCOM is not set
 +# CONFIG_NET_VENDOR_BROCADE is not set
 +# CONFIG_NET_VENDOR_CADENCE is not set
@@ -3184,6 +3176,8 @@ index 000000000..98e035164
 +# Intel thermal drivers
 +#
 +# CONFIG_INTEL_POWERCLAMP is not set
++CONFIG_X86_THERMAL_VECTOR=y
++CONFIG_X86_PKG_TEMP_THERMAL=y
 +# CONFIG_INTEL_SOC_DTS_THERMAL is not set
 +
 +#
@@ -3388,6 +3382,7 @@ index 000000000..98e035164
 +# CONFIG_HID_PETALYNX is not set
 +# CONFIG_HID_PICOLCD is not set
 +# CONFIG_HID_PLANTRONICS is not set
++# CONFIG_HID_PLAYSTATION is not set
 +# CONFIG_HID_PRIMAX is not set
 +# CONFIG_HID_SAITEK is not set
 +# CONFIG_HID_SAMSUNG is not set
@@ -3460,6 +3455,7 @@ index 000000000..98e035164
 +# CONFIG_DW_EDMA_PCIE is not set
 +CONFIG_HSU_DMA=y
 +# CONFIG_SF_PDMA is not set
++# CONFIG_INTEL_LDMA is not set
 +
 +#
 +# DMA Clients
@@ -3474,6 +3470,7 @@ index 000000000..98e035164
 +# CONFIG_SW_SYNC is not set
 +# CONFIG_UDMABUF is not set
 +# CONFIG_DMABUF_MOVE_NOTIFY is not set
++# CONFIG_DMABUF_DEBUG is not set
 +# CONFIG_DMABUF_SELFTESTS is not set
 +# CONFIG_DMABUF_HEAPS is not set
 +# end of DMABUF options
@@ -3486,6 +3483,7 @@ index 000000000..98e035164
 +# CONFIG_VBOXGUEST is not set
 +# CONFIG_NITRO_ENCLAVES is not set
 +CONFIG_VIRTIO=y
++CONFIG_VIRTIO_PCI_LIB=y
 +CONFIG_VIRTIO_MENU=y
 +CONFIG_VIRTIO_PCI=y
 +CONFIG_VIRTIO_PCI_LEGACY=y
@@ -3516,7 +3514,7 @@ index 000000000..98e035164
 +#
 +CONFIG_XEN_BALLOON=y
 +CONFIG_XEN_BALLOON_MEMORY_HOTPLUG=y
-+CONFIG_XEN_BALLOON_MEMORY_HOTPLUG_LIMIT=512
++CONFIG_XEN_MEMORY_HOTPLUG_LIMIT=512
 +CONFIG_XEN_SCRUB_PAGES_DEFAULT=y
 +CONFIG_XEN_DEV_EVTCHN=y
 +CONFIG_XEN_BACKEND=y
@@ -3551,6 +3549,7 @@ index 000000000..98e035164
 +CONFIG_CLKDEV_LOOKUP=y
 +CONFIG_HAVE_CLK_PREPARE=y
 +CONFIG_COMMON_CLK=y
++# CONFIG_XILINX_VCU is not set
 +# CONFIG_HWSPINLOCK is not set
 +
 +#
@@ -3633,7 +3632,6 @@ index 000000000..98e035164
 +#
 +# Xilinx SoC drivers
 +#
-+# CONFIG_XILINX_VCU is not set
 +# end of Xilinx SoC drivers
 +# end of SOC (System On Chip) specific Drivers
 +
@@ -3881,6 +3879,7 @@ index 000000000..98e035164
 +CONFIG_LOCKD_V4=y
 +CONFIG_NFS_ACL_SUPPORT=y
 +CONFIG_NFS_COMMON=y
++CONFIG_NFS_V4_2_SSC_HELPER=y
 +CONFIG_SUNRPC=y
 +CONFIG_SUNRPC_GSS=y
 +CONFIG_SUNRPC_BACKCHANNEL=y
@@ -4094,10 +4093,7 @@ index 000000000..98e035164
 +# CONFIG_CRYPTO_MD4 is not set
 +CONFIG_CRYPTO_MD5=y
 +# CONFIG_CRYPTO_MICHAEL_MIC is not set
-+# CONFIG_CRYPTO_RMD128 is not set
 +# CONFIG_CRYPTO_RMD160 is not set
-+# CONFIG_CRYPTO_RMD256 is not set
-+# CONFIG_CRYPTO_RMD320 is not set
 +CONFIG_CRYPTO_SHA1=y
 +# CONFIG_CRYPTO_SHA1_SSSE3 is not set
 +# CONFIG_CRYPTO_SHA256_SSSE3 is not set
@@ -4107,7 +4103,6 @@ index 000000000..98e035164
 +# CONFIG_CRYPTO_SHA3 is not set
 +# CONFIG_CRYPTO_SM3 is not set
 +# CONFIG_CRYPTO_STREEBOG is not set
-+# CONFIG_CRYPTO_TGR192 is not set
 +# CONFIG_CRYPTO_WP512 is not set
 +# CONFIG_CRYPTO_GHASH_CLMUL_NI_INTEL is not set
 +
@@ -4130,7 +4125,6 @@ index 000000000..98e035164
 +# CONFIG_CRYPTO_DES is not set
 +# CONFIG_CRYPTO_DES3_EDE_X86_64 is not set
 +# CONFIG_CRYPTO_FCRYPT is not set
-+# CONFIG_CRYPTO_SALSA20 is not set
 +# CONFIG_CRYPTO_CHACHA20 is not set
 +# CONFIG_CRYPTO_CHACHA20_X86_64 is not set
 +# CONFIG_CRYPTO_SERPENT is not set
@@ -4360,6 +4354,8 @@ index 000000000..98e035164
 +CONFIG_CC_HAS_KASAN_GENERIC=y
 +CONFIG_CC_HAS_WORKING_NOSANITIZE_ADDRESS=y
 +# CONFIG_KASAN is not set
++CONFIG_HAVE_ARCH_KFENCE=y
++# CONFIG_KFENCE is not set
 +# end of Memory Debugging
 +
 +#
@@ -4386,6 +4382,7 @@ index 000000000..98e035164
 +# CONFIG_WW_MUTEX_SELFTEST is not set
 +# end of Lock Debugging (spinlocks, mutexes, etc...)
 +
++# CONFIG_DEBUG_IRQFLAGS is not set
 +# CONFIG_STACKTRACE is not set
 +# CONFIG_WARN_ALL_UNSEEDED_RANDOM is not set
 +
@@ -4412,6 +4409,7 @@ index 000000000..98e035164
 +CONFIG_HAVE_FTRACE_MCOUNT_RECORD=y
 +CONFIG_HAVE_SYSCALL_TRACEPOINTS=y
 +CONFIG_HAVE_FENTRY=y
++CONFIG_HAVE_OBJTOOL_MCOUNT=y
 +CONFIG_HAVE_C_RECORDMCOUNT=y
 +CONFIG_TRACING_SUPPORT=y
 +# CONFIG_FTRACE is not set
