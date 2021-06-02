@@ -1,7 +1,7 @@
-From 63d8a03c5203676fbf6afae80d7dcad278e310ab Mon Sep 17 00:00:00 2001
+From b0c98e0d917179bdc91feb7e927976e1648676f8 Mon Sep 17 00:00:00 2001
 From: Jens Gerke <jens.gerke@vorteil.io>
-Date: Tue, 1 Jun 2021 07:22:01 +1000
-Subject: [PATCH 1/1] 5.12.8
+Date: Thu, 3 Jun 2021 07:53:39 +1000
+Subject: [PATCH 1/1] iso
 
 Signed-off-by: Jens Gerke <jens.gerke@vorteil.io>
 ---
@@ -18,8 +18,8 @@ Signed-off-by: Jens Gerke <jens.gerke@vorteil.io>
  drivers/_vorteil/vtty.c       |  119 ++
  init/do_mounts.c              |   10 +-
  init/main.c                   |    8 +
- linux.config                  | 3436 +++++++++++++++++++++++++++++++++
- 14 files changed, 4323 insertions(+), 1 deletion(-)
+ linux.config                  | 3438 +++++++++++++++++++++++++++++++++
+ 14 files changed, 4325 insertions(+), 1 deletion(-)
  create mode 100644 drivers/_vorteil/Kconfig
  create mode 100644 drivers/_vorteil/Makefile
  create mode 100644 drivers/_vorteil/bootdev.c
@@ -1033,13 +1033,13 @@ index 53b278845..2a677bf42 100644
  	do_sysctl_args();
 diff --git a/linux.config b/linux.config
 new file mode 100644
-index 000000000..11b19a9fb
+index 000000000..7947651a1
 --- /dev/null
 +++ b/linux.config
-@@ -0,0 +1,3436 @@
+@@ -0,0 +1,3438 @@
 +#
 +# Automatically generated file; DO NOT EDIT.
-+# Linux/x86 5.12.5 Kernel Configuration
++# Linux/x86 5.12.8 Kernel Configuration
 +#
 +CONFIG_CC_VERSION_TEXT="gcc (Ubuntu 9.3.0-17ubuntu1~20.04) 9.3.0"
 +CONFIG_CC_IS_GCC=y
@@ -3768,8 +3768,10 @@ index 000000000..11b19a9fb
 +#
 +# CD-ROM/DVD Filesystems
 +#
-+# CONFIG_ISO9660_FS is not set
-+# CONFIG_UDF_FS is not set
++CONFIG_ISO9660_FS=y
++CONFIG_JOLIET=y
++CONFIG_ZISOFS=y
++CONFIG_UDF_FS=y
 +# end of CD-ROM/DVD Filesystems
 +
 +#
@@ -4213,7 +4215,7 @@ index 000000000..11b19a9fb
 +CONFIG_CRC_CCITT=y
 +CONFIG_CRC16=y
 +CONFIG_CRC_T10DIF=y
-+# CONFIG_CRC_ITU_T is not set
++CONFIG_CRC_ITU_T=y
 +CONFIG_CRC32=y
 +# CONFIG_CRC32_SELFTEST is not set
 +CONFIG_CRC32_SLICEBY8=y
